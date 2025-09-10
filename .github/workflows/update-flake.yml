@@ -1,0 +1,65 @@
+name: Update Flake
+
+on:
+  schedule:
+    # Run monthly on the 1st at 2 AM UTC
+    - cron: '0 2 1 * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  update-flake:
+    name: Update Nix Flake Inputs
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Install Nix
+      uses: cachix/install-nix-action@v24
+      with:
+        github_access_token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Update flake inputs
+      run: |
+        # Update all flake inputs
+        nix flake update
+        
+        # Check if there are any changes
+        if git diff --quiet flake.lock; then
+          echo "No updates available"
+          echo "updated=false" >> $GITHUB_OUTPUT
+        else
+          echo "Flake inputs updated"
+          echo "updated=true" >> $GITHUB_OUTPUT
+        fi
+      id: update
+      
+    - name: Test updated flake
+      if: steps.update.outputs.updated == 'true'
+      run: |
+        # Test that everything still works with updated inputs
+        nix flake check --show-trace
+        nix develop -c bats tests/*.bats
+        
+    - name: Create pull request
+      if: steps.update.outputs.updated == 'true'
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: 'chore: update flake inputs'
+        title: 'chore: update nix flake inputs'
+        body: |
+          Automated update of Nix flake inputs.
+          
+          ## Changes
+          - Updated all flake inputs to latest versions
+          - All tests pass with updated dependencies
+          
+          This PR was automatically created by the update-flake workflow.
+          
+          🤖 Generated automatically
+        branch: automated/update-flake-inputs
+        delete-branch: true

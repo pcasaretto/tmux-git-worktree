@@ -1,0 +1,195 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Install Nix
+      uses: cachix/install-nix-action@v24
+      with:
+        github_access_token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Setup Cachix
+      uses: cachix/cachix-action@v12
+      with:
+        name: devenv
+        
+    - name: Run flake checks
+      run: nix flake check --show-trace
+      
+    - name: Run test suite
+      run: nix develop -c bats tests/*.bats
+      
+    - name: Run shellcheck validation
+      run: nix develop -c shellcheck scripts/*.sh worktree.tmux
+      
+    - name: Test plugin integration
+      run: |
+        nix develop -c bash -c '
+          # Set up test tmux session
+          export TMUX_TMPDIR="$(mktemp -d)"
+          
+          # Test plugin loading
+          echo "Testing plugin integration..."
+          tmux new-session -d -s test-session
+          
+          # Source the plugin
+          tmux source-file "$PWD/worktree.tmux"
+          
+          # Test interpolation setup
+          tmux set -g status-right "#{git_worktree} %H:%M"
+          
+          # Verify status options were set
+          tmux show -g status-right | grep -q "get_worktree.sh"
+          
+          # Clean up
+          tmux kill-session -t test-session
+          rm -rf "$TMUX_TMPDIR"
+          
+          echo "Plugin integration test passed!"
+        '
+
+  shellcheck:
+    name: ShellCheck Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Install ShellCheck
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y shellcheck
+        
+    - name: Run ShellCheck on scripts
+      run: shellcheck scripts/*.sh worktree.tmux
+      
+    - name: Validate shell script syntax
+      run: |
+        for script in scripts/*.sh worktree.tmux; do
+          echo "Checking syntax: $script"
+          bash -n "$script"
+        done
+
+  nix-build:
+    name: Nix Build Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Install Nix
+      uses: cachix/install-nix-action@v24
+      with:
+        github_access_token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Build package
+      run: nix build --show-trace
+      
+    - name: Test package installation
+      run: |
+        # Build and test the package
+        result=$(nix build --print-out-paths)
+        echo "Package built at: $result"
+        
+        # Verify package structure
+        test -f "$result/worktree.tmux"
+        test -f "$result/scripts/get_worktree.sh" 
+        test -f "$result/scripts/helpers.sh"
+        test -x "$result/scripts/get_worktree.sh"
+        test -x "$result/scripts/helpers.sh"
+        
+        echo "Package structure validated!"
+
+  compatibility:
+    name: Compatibility Testing
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Install dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y tmux git bats
+        
+    - name: Install dependencies (macOS)
+      if: matrix.os == 'macos-latest' 
+      run: |
+        brew install tmux git bats-core
+        
+    - name: Test scripts directly
+      run: |
+        # Test get_worktree.sh works on this platform
+        chmod +x scripts/*.sh worktree.tmux
+        
+        # Create test git repo
+        git config --global user.email "test@example.com"
+        git config --global user.name "Test User"
+        
+        mkdir test-repo && cd test-repo
+        git init
+        echo "test" > README.md
+        git add README.md
+        git commit -m "Initial commit"
+        
+        # Test script returns nothing in main repo (expected)
+        result=$(../scripts/get_worktree.sh)
+        if [[ -n "$result" ]]; then
+          echo "Error: Script should return empty in main repo"
+          exit 1
+        fi
+        
+        echo "Platform compatibility test passed!"
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Run Bandit security scan
+      run: |
+        # Check for common security issues in shell scripts
+        echo "Scanning for potential security issues..."
+        
+        # Check for dangerous patterns
+        if grep -r "eval\|exec\|system" scripts/ worktree.tmux; then
+          echo "Warning: Found potentially dangerous commands"
+        fi
+        
+        # Check for hardcoded paths that might be security issues
+        if grep -r "/tmp" scripts/ worktree.tmux | grep -v "mktemp"; then
+          echo "Info: Found hardcoded /tmp usage (should use mktemp)"
+        fi
+        
+        # Check file permissions
+        find . -name "*.sh" -o -name "*.tmux" | while read -r file; do
+          if [[ -x "$file" ]]; then
+            echo "Executable: $file ✓"
+          else
+            echo "Warning: $file is not executable"
+          fi
+        done
+        
+        echo "Security scan completed!"

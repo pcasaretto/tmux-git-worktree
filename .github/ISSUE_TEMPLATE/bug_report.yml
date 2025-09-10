@@ -1,0 +1,80 @@
+name: Bug Report
+description: File a bug report to help improve the plugin
+title: "[Bug] "
+labels: ["bug"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the information below.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear description of what the bug is
+      placeholder: Describe the issue you're experiencing
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Set up git worktree with '...'
+        2. Configure tmux status with '...'
+        3. Switch to worktree '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen
+      placeholder: The plugin should display the worktree name
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened
+      placeholder: The plugin shows nothing/wrong name/error
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Information about your environment
+      value: |
+        - OS: [e.g., macOS 14.0, Ubuntu 22.04]
+        - Tmux version: [run `tmux -V`]
+        - Git version: [run `git --version`]
+        - Shell: [e.g., bash, zsh]
+        - Installation method: [Nix, TPM, manual]
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Tmux Configuration
+      description: Relevant parts of your tmux configuration
+      placeholder: |
+        set -g status-right "#{git_worktree} %H:%M"
+        # any other relevant configuration
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other context about the problem
+      placeholder: Screenshots, logs, or other relevant information
