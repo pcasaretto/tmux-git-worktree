@@ -1,0 +1,4 @@
+result
+.direnv/
+tests/fixtures/*
+!tests/fixtures/.gitkeep
