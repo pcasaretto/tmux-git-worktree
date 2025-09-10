@@ -72,3 +72,20 @@ line3" "$output"
     run get_tmux_option "@special-option_name"
     assert_equals "test_value" "$output"
 }
+
+@test "get_tmux_option: handles tmux command failure correctly" {
+    # This test should FAIL initially because of SC2155 issue
+    # Mock tmux to return exit code 1 (failure)
+    cat > tmux << 'EOF'
+#!/bin/bash
+# Simulate tmux command failure
+exit 1
+EOF
+    chmod +x tmux
+    export PATH="$PWD:$PATH"
+    
+    # With SC2155 issue, command substitution masks the return value
+    # This should return the default value when tmux fails
+    run get_tmux_option "failing_option" "default_value"
+    assert_equals "default_value" "$output"
+}
