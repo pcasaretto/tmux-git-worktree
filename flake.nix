@@ -63,6 +63,13 @@
           };
         };
 
+        # Make package available as overlay for integration with tmuxPlugins
+        overlays.default = final: prev: {
+          tmuxPlugins = prev.tmuxPlugins // {
+            git-worktree = self.packages.${final.system}.default;
+          };
+        };
+
         # Add a check for CI/CD
         checks = {
           tests = pkgs.stdenv.mkDerivation {

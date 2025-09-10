@@ -9,6 +9,56 @@ A tmux plugin that displays the current git worktree name in the status bar.
 - Lightweight shell script implementation
 - Compatible with Nix/home-manager
 
+## Installation
+
+### Using Home Manager with Nix Flakes
+
+Add the flake input and use the overlay:
+
+```nix
+{
+  inputs.tmux-git-worktree.url = "github:pcasaretto/tmux-git-worktree";
+  
+  # In your system or home-manager configuration:
+  nixpkgs.overlays = [ inputs.tmux-git-worktree.overlays.default ];
+  
+  programs.tmux.plugins = [
+    pkgs.tmuxPlugins.git-worktree
+  ];
+}
+```
+
+### Using Home Manager (direct package)
+
+```nix
+{
+  inputs.tmux-git-worktree.url = "github:pcasaretto/tmux-git-worktree";
+  
+  programs.tmux.plugins = [
+    inputs.tmux-git-worktree.packages.${system}.default
+  ];
+}
+```
+
+### Using NixOS/nix-darwin
+
+```nix
+{
+  inputs.tmux-git-worktree.url = "github:pcasaretto/tmux-git-worktree";
+  
+  nixpkgs.overlays = [ inputs.tmux-git-worktree.overlays.default ];
+  
+  # Then in your user configuration:
+  programs.tmux.plugins = [ pkgs.tmuxPlugins.git-worktree ];
+}
+```
+
+### Manual Installation
+
+1. Clone this repository
+2. Add the plugin to your tmux configuration
+3. Source the plugin in your `.tmux.conf`
+
 ## Usage
 
 The plugin provides a tmux format variable `#{git_worktree}` that you can use in your status bar configuration.
@@ -18,6 +68,10 @@ The plugin provides a tmux format variable `#{git_worktree}` that you can use in
 ```bash
 set -g status-right "#{git_worktree} %H:%M %d-%b-%y"
 ```
+
+### Configuration Options
+
+- `@git_worktree_auto_refresh` - Set to `off` to disable automatic status refresh (default: `on`)
 
 ## How it works
 
