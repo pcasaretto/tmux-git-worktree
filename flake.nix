@@ -18,6 +18,22 @@
             version = "1.0.0";
             src = ./.;
             rtpFilePath = "worktree.tmux";
+            
+            # Ensure git is available in runtime
+            buildInputs = [ pkgs.git ];
+            
+            # Wrap scripts to use Nix bash for the packaged version
+            postInstall = ''
+              # Wrap shell scripts with Nix tools for proper execution
+              for script in $target/scripts/*.sh $target/worktree.tmux; do
+                if [ -f "$script" ]; then
+                  wrapProgram "$script" --prefix PATH : "${pkgs.lib.makeBinPath [ pkgs.bash pkgs.git pkgs.coreutils ]}"
+                fi
+              done
+            '';
+            
+            nativeBuildInputs = [ pkgs.makeWrapper ];
+            
             meta = with pkgs.lib; {
               homepage = "https://github.com/pcasaretto/nix-home/tree/main/tmux-git-worktree";
               description = "Tmux plugin for displaying git worktree information in status bar";
@@ -35,6 +51,7 @@
             git
             tmux
             bats
+            shellcheck
           ];
         };
 
