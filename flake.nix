@@ -16,7 +16,7 @@
           tmux-git-worktree = pkgs.tmuxPlugins.mkTmuxPlugin {
             pluginName = "tmux-git-worktree";
             version = "1.0.0";
-            src = ./.;
+            src = self;
             rtpFilePath = "worktree.tmux";
             
             # Ensure git is available in runtime
