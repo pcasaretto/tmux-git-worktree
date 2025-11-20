@@ -18,10 +18,10 @@
             version = "1.0.0";
             src = self;
             rtpFilePath = "worktree.tmux";
-            
+
             # Ensure git is available in runtime
             buildInputs = [ pkgs.git ];
-            
+
             # Wrap executable scripts to use Nix bash for the packaged version
             postInstall = ''
               # Only wrap executable files, not sourced files like helpers.sh
@@ -31,9 +31,9 @@
                 fi
               done
             '';
-            
+
             nativeBuildInputs = [ pkgs.makeWrapper ];
-            
+
             meta = with pkgs.lib; {
               homepage = "https://github.com/pcasaretto/nix-home/tree/main/tmux-git-worktree";
               description = "Tmux plugin for displaying git worktree information in status bar";
@@ -63,29 +63,28 @@
           };
         };
 
-        # Make package available as overlay for integration with tmuxPlugins
-        overlays.default = final: prev: {
-          tmuxPlugins = prev.tmuxPlugins // {
-            git-worktree = self.packages.${final.system}.default;
-          };
-        };
-
         # Add a check for CI/CD
         checks = {
           tests = pkgs.stdenv.mkDerivation {
             name = "tmux-git-worktree-tests";
             src = ./.;
-            
-            buildInputs = with pkgs; [ bats bash git tmux ];
-            
+
+            buildInputs = with pkgs; [ bats bash git tmux shellcheck ];
+
             buildPhase = ''
               # Set up environment
               export PLUGIN_DIR="$PWD"
-              
+              export HOME=$TMPDIR
+
+              # Configure git identity for tests
+              git config --global user.email "test@example.com"
+              git config --global user.name "Test User"
+              git config --global init.defaultBranch "main"
+
               # Run the test suite
               bats tests/*.bats
             '';
-            
+
             installPhase = ''
               mkdir -p $out
               echo "Tests passed" > $out/result
@@ -93,5 +92,12 @@
           };
         };
       }
-    );
+    ) // {
+      # Make package available as overlay for integration with tmuxPlugins
+      overlays.default = final: prev: {
+        tmuxPlugins = prev.tmuxPlugins // {
+          git-worktree = self.packages.${final.system}.default;
+        };
+      };
+    };
 }

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 get_git_worktree() {
 	local work_dir="${1:-$PWD}"
