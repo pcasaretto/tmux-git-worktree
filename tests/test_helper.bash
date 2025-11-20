@@ -80,6 +80,12 @@ case "$1" in
 esac
 EOF
     chmod +x tmux
+
+    # If patchShebangs is available (Nix build), use it to fix the shebang
+    if command -v patchShebangs &> /dev/null; then
+        patchShebangs tmux
+    fi
+
     export PATH="$PWD:$PATH"
 }
 

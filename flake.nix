@@ -69,7 +69,13 @@
             name = "tmux-git-worktree-tests";
             src = ./.;
 
+            nativeBuildInputs = [ pkgs.makeWrapper ];
             buildInputs = with pkgs; [ bats bash git tmux shellcheck ];
+
+            # Patch shebangs in source scripts before running tests
+            postPatch = ''
+              patchShebangs scripts tests
+            '';
 
             buildPhase = ''
               # Set up environment
