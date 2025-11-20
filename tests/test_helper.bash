@@ -56,7 +56,7 @@ create_worktree() {
 mock_tmux() {
     # Create a fake tmux that stores/retrieves options in temp files
     cat > tmux << 'EOF'
-#!/bin/bash
+#!/usr/bin/env bash
 case "$1" in
     "show-option")
         # tmux show-option -gqv option_name
