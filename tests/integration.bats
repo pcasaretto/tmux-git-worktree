@@ -6,7 +6,11 @@ setup() {
     # Call the test_helper setup
     TEST_TEMP_DIR="$(mktemp -d)"
     cd "$TEST_TEMP_DIR"
-    
+
+    # Source the main script (main() won't run due to BATS_TEST_FILENAME guard)
+    source "$PLUGIN_DIR/worktree.tmux"
+
+    # Apply mocks AFTER sourcing to override the real functions
     mock_tmux
 }
 
@@ -21,31 +25,31 @@ teardown() {
 
 @test "full plugin: loads and configures status-right correctly" {
     # Set up initial tmux status
-    echo "#{git_worktree} %H:%M" > "/tmp/tmux_test_status-right"
-    echo "#{session_name}" > "/tmp/tmux_test_status-left"
-    
+    TMUX_TEST_OPTIONS["status-right"]="#{git_worktree} %H:%M"
+    TMUX_TEST_OPTIONS["status-left"]="#{session_name}"
+
     # Run the main plugin script
-    run "$PLUGIN_DIR/worktree.tmux"
-    
+    main
+
     # Check that status-right was updated
-    local status_right="$(cat /tmp/tmux_test_status-right)"
+    local status_right="${TMUX_TEST_OPTIONS[status-right]}"
     assert_contains "#($PLUGIN_DIR/scripts/get_worktree.sh #{pane_current_path})" "$status_right"
     assert_contains "%H:%M" "$status_right"
-    
+
     # Check that status-left remains unchanged (no placeholder)
-    local status_left="$(cat /tmp/tmux_test_status-left)"
+    local status_left="${TMUX_TEST_OPTIONS[status-left]}"
     assert_equals "#{session_name}" "$status_left"
 }
 
 @test "full plugin: handles both status-right and status-left" {
-    echo "[#{git_worktree}] #{session_name}" > "/tmp/tmux_test_status-left"
-    echo "#{git_worktree} | %H:%M" > "/tmp/tmux_test_status-right"
-    
-    run "$PLUGIN_DIR/worktree.tmux"
-    
-    local status_left="$(cat /tmp/tmux_test_status-left)"
-    local status_right="$(cat /tmp/tmux_test_status-right)"
-    
+    TMUX_TEST_OPTIONS["status-left"]="[#{git_worktree}] #{session_name}"
+    TMUX_TEST_OPTIONS["status-right"]="#{git_worktree} | %H:%M"
+
+    main
+
+    local status_left="${TMUX_TEST_OPTIONS[status-left]}"
+    local status_right="${TMUX_TEST_OPTIONS[status-right]}"
+
     assert_contains "[#($PLUGIN_DIR/scripts/get_worktree.sh #{pane_current_path})]" "$status_left"
     assert_contains "#($PLUGIN_DIR/scripts/get_worktree.sh #{pane_current_path})" "$status_right"
 }
