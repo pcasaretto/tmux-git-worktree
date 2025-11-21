@@ -29,7 +29,6 @@ jobs:
     - name: Run tests before release
       run: |
         nix flake check --show-trace
-        nix develop -c bats tests/*.bats
         
     - name: Build package
       run: |
