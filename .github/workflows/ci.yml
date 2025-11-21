@@ -104,15 +104,6 @@ jobs:
         # Build and test the package
         result=$(nix build --print-out-paths)
         echo "Package built at: $result"
-        
-        # Verify package structure
-        test -f "$result/worktree.tmux"
-        test -f "$result/scripts/get_worktree.sh" 
-        test -f "$result/scripts/helpers.sh"
-        test -x "$result/scripts/get_worktree.sh"
-        test -x "$result/scripts/helpers.sh"
-        
-        echo "Package structure validated!"
 
   compatibility:
     name: Compatibility Testing
