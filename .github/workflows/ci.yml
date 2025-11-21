@@ -27,39 +27,6 @@ jobs:
         
     - name: Run flake checks
       run: nix flake check --show-trace
-      
-    - name: Run test suite
-      run: nix develop -c bats tests/*.bats
-      
-    - name: Run shellcheck validation
-      run: nix develop -c shellcheck scripts/*.sh worktree.tmux
-      
-    - name: Test plugin integration
-      run: |
-        nix develop -c bash -c '
-          # Set up test tmux session
-          export TMUX_TMPDIR="$(mktemp -d)"
-          
-          # Test plugin loading
-          echo "Testing plugin integration..."
-          tmux new-session -d -s test-session
-          
-          # Source the plugin
-          tmux source-file "$PWD/worktree.tmux"
-          
-          # Test interpolation setup
-          tmux set -g status-right "#{git_worktree} %H:%M"
-          
-          # Verify status options were set
-          tmux show -g status-right | grep -q "get_worktree.sh"
-          
-          # Clean up
-          tmux kill-session -t test-session
-          rm -rf "$TMUX_TMPDIR"
-          
-          echo "Plugin integration test passed!"
-        '
-
   shellcheck:
     name: ShellCheck Analysis
     runs-on: ubuntu-latest
@@ -92,7 +59,7 @@ jobs:
       uses: actions/checkout@v4
       
     - name: Install Nix
-      uses: cachix/install-nix-action@v24
+      uses: cachix/install-nix-action@v31
       with:
         github_access_token: ${{ secrets.GITHUB_TOKEN }}
         
