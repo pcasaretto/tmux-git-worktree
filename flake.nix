@@ -72,6 +72,12 @@
             nativeBuildInputs = [ pkgs.makeWrapper ];
             buildInputs = with pkgs; [ bats bash git tmux shellcheck ];
 
+            # Patch shebangs in source scripts (but not test infrastructure)
+            # This is needed for integration tests that execute the actual scripts
+            postPatch = ''
+              patchShebangs scripts worktree.tmux
+            '';
+
             buildPhase = ''
               # Set up environment
               export PLUGIN_DIR="$PWD"

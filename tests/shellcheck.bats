@@ -23,6 +23,11 @@ load test_helper
 }
 
 @test "scripts use portable bash shebangs" {
+    # Skip this test in Nix builds where patchShebangs has modified the scripts
+    if [[ "$(head -n 1 "$PLUGIN_DIR/scripts/get_worktree.sh")" == *"/nix/store/"* ]]; then
+        skip "Shebangs already patched by Nix"
+    fi
+
     # Scripts should use portable #!/usr/bin/env bash for broad compatibility
     # Nix packaging will handle wrapping for Nix users
     for script in "$PLUGIN_DIR/scripts"/*.sh "$PLUGIN_DIR/worktree.tmux"; do
