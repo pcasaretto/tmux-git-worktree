@@ -72,4 +72,8 @@ main() {
 	update_tmux_option "status-left"
 	setup_tmux_hooks
 }
-main
+
+# Only run main if not being sourced for testing
+if [[ "${BATS_TEST_FILENAME:-}" == "" ]]; then
+	main
+fi

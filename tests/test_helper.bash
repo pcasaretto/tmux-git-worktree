@@ -52,47 +52,37 @@ create_worktree() {
     git worktree add "../$worktree_name" "$branch_name"
 }
 
-# Mock tmux command for testing
+# Mock tmux functions for testing
+# Instead of creating a fake tmux executable, we override the bash functions
+# that interact with tmux. This avoids shebang/PATH issues in Nix builds.
 mock_tmux() {
-    # Create a fake tmux that stores/retrieves options in temp files
-    cat > tmux << 'EOF'
-#!/usr/bin/env bash
-case "$1" in
-    "show-option")
-        # tmux show-option -gqv option_name
-        # Arguments: $1=show-option, $2=-gqv, $3=option_name
-        option_name="$3"
-        if [[ -f "/tmp/tmux_test_${option_name}" ]]; then
-            cat "/tmp/tmux_test_${option_name}"
-        fi
-        ;;
-    "set-option")
-        # tmux set-option -gq option_name value
-        # Arguments: $1=set-option, $2=-gq, $3=option_name, $4=value
-        option_name="$3"
-        value="$4"
-        echo "$value" > "/tmp/tmux_test_${option_name}"
-        ;;
-    *)
-        echo "Unknown tmux command: $*" >&2
-        exit 1
-        ;;
-esac
-EOF
-    chmod +x tmux
+    # Storage for tmux options using associative array
+    declare -gA TMUX_TEST_OPTIONS
 
-    # If patchShebangs is available (Nix build), use it to fix the shebang
-    if command -v patchShebangs &> /dev/null; then
-        patchShebangs tmux
-    fi
+    # Override get_tmux_option to read from our mock storage
+    get_tmux_option() {
+        local option=$1
+        local default_value=$2
+        echo "${TMUX_TEST_OPTIONS[$option]:-$default_value}"
+    }
 
-    export PATH="$PWD:$PATH"
+    # Override set_tmux_option to write to our mock storage
+    set_tmux_option() {
+        local option=$1
+        local value=$2
+        TMUX_TEST_OPTIONS[$option]="$value"
+    }
+
+    # Export functions so they're available to sourced scripts
+    export -f get_tmux_option
+    export -f set_tmux_option
 }
 
-# Clean up mock tmux files
+# Clean up mock tmux state
 cleanup_mock_tmux() {
-    rm -f /tmp/tmux_test_*
-    rm -f tmux
+    unset TMUX_TEST_OPTIONS
+    unset -f get_tmux_option 2>/dev/null || true
+    unset -f set_tmux_option 2>/dev/null || true
 }
 
 # Assert that output contains expected string

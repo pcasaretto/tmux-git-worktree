@@ -3,9 +3,11 @@
 load test_helper
 
 setup() {
-    mock_tmux
-    # Source the main script functions for testing
+    # Source the main script (main() won't run due to BATS_TEST_FILENAME guard)
     source "$PLUGIN_DIR/worktree.tmux"
+
+    # Apply mocks AFTER sourcing to override the real functions
+    mock_tmux
 }
 
 teardown() {
@@ -58,66 +60,66 @@ teardown() {
 }
 
 @test "update_tmux_option: updates status-right with interpolation" {
-    # Set up initial status-right value
-    echo "#{git_worktree} %H:%M" > "/tmp/tmux_test_status-right"
-    
-    run update_tmux_option "status-right"
-    
+    # Set up initial status-right value using mock function
+    TMUX_TEST_OPTIONS["status-right"]="#{git_worktree} %H:%M"
+
+    update_tmux_option "status-right"
+
     # Check that the option was updated
-    local updated_value="$(cat /tmp/tmux_test_status-right)"
+    local updated_value="${TMUX_TEST_OPTIONS[status-right]}"
     assert_contains "#($PLUGIN_DIR/scripts/get_worktree.sh #{pane_current_path})" "$updated_value"
     assert_contains "%H:%M" "$updated_value"
 }
 
 @test "update_tmux_option: updates status-left with interpolation" {
-    echo "[#{git_worktree}] #{session_name}" > "/tmp/tmux_test_status-left"
-    
-    run update_tmux_option "status-left"
-    
-    local updated_value="$(cat /tmp/tmux_test_status-left)"
+    TMUX_TEST_OPTIONS["status-left"]="[#{git_worktree}] #{session_name}"
+
+    update_tmux_option "status-left"
+
+    local updated_value="${TMUX_TEST_OPTIONS[status-left]}"
     assert_contains "[#($PLUGIN_DIR/scripts/get_worktree.sh #{pane_current_path})]" "$updated_value"
     assert_contains "#{session_name}" "$updated_value"
 }
 
 @test "update_tmux_option: handles non-existent option gracefully" {
-    rm -f "/tmp/tmux_test_nonexistent"
-    
-    run update_tmux_option "nonexistent"
-    
+    # Option doesn't exist in array, should use default empty value
+    unset 'TMUX_TEST_OPTIONS[nonexistent]'
+
+    update_tmux_option "nonexistent"
+
     # Should create the option with empty value (no interpolation needed)
-    [[ -f "/tmp/tmux_test_nonexistent" ]]
-    local value="$(cat /tmp/tmux_test_nonexistent)"
+    local value="${TMUX_TEST_OPTIONS[nonexistent]}"
     assert_empty "$value"
 }
 
 @test "update_tmux_option: handles option with no git_worktree placeholder" {
-    echo "%H:%M %d-%b-%y" > "/tmp/tmux_test_status-right"
-    
-    run update_tmux_option "status-right"
-    
+    TMUX_TEST_OPTIONS["status-right"]="%H:%M %d-%b-%y"
+
+    update_tmux_option "status-right"
+
     # Option should remain unchanged
-    local updated_value="$(cat /tmp/tmux_test_status-right)"
+    local updated_value="${TMUX_TEST_OPTIONS[status-right]}"
     assert_equals "%H:%M %d-%b-%y" "$updated_value"
 }
 
 @test "set_tmux_option: sets option correctly" {
-    run set_tmux_option "test_option" "test_value"
-    
-    local value="$(cat /tmp/tmux_test_test_option)"
+    set_tmux_option "test_option" "test_value"
+
+    local value="${TMUX_TEST_OPTIONS[test_option]}"
     assert_equals "test_value" "$value"
 }
 
 @test "set_tmux_option: handles values with spaces" {
-    run set_tmux_option "spaced_option" "value with spaces"
-    
-    local value="$(cat /tmp/tmux_test_spaced_option)"
+    set_tmux_option "spaced_option" "value with spaces"
+
+    local value="${TMUX_TEST_OPTIONS[spaced_option]}"
     assert_equals "value with spaces" "$value"
 }
 
 @test "set_tmux_option: handles special characters" {
     local special_value="value with #special @chars"
-    run set_tmux_option "special_option" "$special_value"
-    
-    local value="$(cat /tmp/tmux_test_special_option)"
+    set_tmux_option "special_option" "$special_value"
+
+    local value="${TMUX_TEST_OPTIONS[special_option]}"
     assert_equals "$special_value" "$value"
 }
