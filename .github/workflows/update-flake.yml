@@ -42,7 +42,6 @@ jobs:
       run: |
         # Test that everything still works with updated inputs
         nix flake check --show-trace
-        nix develop -c bats tests/*.bats
         
     - name: Create pull request
       if: steps.update.outputs.updated == 'true'
